@@ -1,0 +1,29 @@
+name: tick
+
+# 5분마다 도나의 알림 점검을 깨운다. 주소와 비밀값은 저장소 secrets 에 있고,
+# 이 저장소는 공개라 로그도 공개되므로 응답 본문은 찍지 않는다(상태 코드만).
+on:
+  schedule:
+    - cron: "2-59/5 * * * *" # 정각(:00)은 GitHub 예약 작업이 몰려 가장 많이 밀린다
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Call tick
+        env:
+          TICK_URL: ${{ secrets.DONNA_TICK_URL }}
+          CRON_SECRET: ${{ secrets.DONNA_CRON_SECRET }}
+        run: |
+          code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 60 --retry 2 --retry-delay 5 \
+            -H "Authorization: Bearer $CRON_SECRET" "$TICK_URL")
+          echo "status=$code"
+          test "$code" = "200"

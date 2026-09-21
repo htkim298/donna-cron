@@ -1,0 +1,24 @@
+name: keepalive
+
+# GitHub 는 60일 동안 활동이 없는 저장소의 예약 워크플로를 자동으로 꺼 버린다.
+# 한 달에 두 번 빈 커밋을 남겨 tick 이 멈추지 않게 한다.
+on:
+  schedule:
+    - cron: "17 3 1,15 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Empty commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "keepalive"
+          git push
