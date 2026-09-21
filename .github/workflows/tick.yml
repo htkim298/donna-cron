@@ -1,7 +1,7 @@
 name: tick
 
 # 5분마다 도나의 알림 점검을 깨운다. 주소와 비밀값은 저장소 secrets 에 있고,
-# 이 저장소는 공개라 로그도 공개되므로 응답 본문은 찍지 않는다(상태 코드만).
+# 이 저장소는 공개라 로그도 공개되므로 상태 코드 말고는 아무것도 찍지 않는다.
 on:
   schedule:
     - cron: "2-59/5 * * * *" # 정각(:00)은 GitHub 예약 작업이 몰려 가장 많이 밀린다
@@ -23,7 +23,9 @@ jobs:
           TICK_URL: ${{ secrets.DONNA_TICK_URL }}
           CRON_SECRET: ${{ secrets.DONNA_CRON_SECRET }}
         run: |
-          code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 60 --retry 2 --retry-delay 5 \
-            -H "Authorization: Bearer $CRON_SECRET" "$TICK_URL")
-          echo "status=$code"
+          # curl 의 오류 문구에는 호스트 이름이 들어간다. GitHub 는 secret 전체가 그대로 나올 때만 가려 주므로
+          # (주소의 일부인 호스트 이름은 가려지지 않는다) stderr 를 버리고 상태 코드만 남긴다.
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 --retry 2 --retry-delay 5 \
+            -H "Authorization: Bearer $CRON_SECRET" "$TICK_URL" 2>/dev/null || true)
+          echo "status=${code:-000}"
           test "$code" = "200"
